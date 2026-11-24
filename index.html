@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Gaben Quill" />
+
+  <link rel="apple-touch-icon" href="./ikon.jpg" />
+  <link rel="icon" type="image/jpeg" href="./ikon.jpg" />
+  <title>Gaben Quill</title>
+
+  <script>
+    async function enablePersistentStorage() {
+      if (navigator.storage && navigator.storage.persist) {
+        await navigator.storage.persist();
+      }
+    }
+    enablePersistentStorage();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0F172A;
+      --card: #1E293B;
+      --border: #334155;
+      --text: #F1F5F9;
+      --muted: #94A3B8;
+      --gold: #C8963E;
+      --owner-g: #38BDF8;
+      --owner-a: #1DAD52;
+      --owner-o: #BD550F;
+      --danger: #EF4444;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 16px 0 90px 0; }
+
+    /* Header */
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap; }
+    .top-bar h2 { margin: 0; font-size: 22px; letter-spacing: 0.3px; }
+    .gold-accent { color: var(--gold); text-shadow: 0 0 12px rgba(200, 150, 62, 0.35); }
+    .top-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex; gap: 10px; font-size: 12px; color: var(--muted);
+      background: var(--card); border: 1px solid var(--border);
+      padding: 8px 12px; border-radius: 10px; margin-bottom: 12px; justify-content: space-between;
+    }
+    .stats-bar span b { color: var(--text); }
+
+    /* Inputs & Buttons */
+    input, select, textarea {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 11px 13px;
+      border-radius: 10px;
+      font-size: 15px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+
+    button {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:active { opacity: 0.7; }
+    .btn-gold { background: var(--gold); border-color: var(--gold); color: #0F172A; font-weight: 700; }
+    .btn-sm { padding: 6px 9px; font-size: 12px; }
+    .btn-danger { color: var(--danger); border-color: rgba(239, 68, 68, 0.4); }
+
+    /* Filters */
+    .owner-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+    .tab { text-align: center; padding: 8px 4px; font-size: 13px; }
+    .tab.active[data-owner="All"] { border-color: var(--gold); color: var(--gold); }
+    .tab.active[data-owner="G"] { border-color: var(--owner-g); color: var(--owner-g); }
+    .tab.active[data-owner="A"] { border-color: var(--owner-a); color: var(--owner-a); }
+    .tab.active[data-owner="O"] { border-color: var(--owner-o); color: var(--owner-o); }
+
+    .sub-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .sub-filters select { margin-bottom: 0; padding: 8px 10px; font-size: 13px; }
+
+    /* Book Cards */
+    .book-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left-width: 4px;
+      border-radius: 12px;
+      padding: 13px 14px;
+      margin-bottom: 10px;
+    }
+    .book-card[data-owner="G"] { border-left-color: var(--owner-g); }
+    .book-card[data-owner="A"] { border-left-color: var(--owner-a); }
+    .book-card[data-owner="O"] { border-left-color: var(--owner-o); }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .book-author { font-size: 12px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .book-title { font-size: 16px; font-weight: 700; margin: 2px 0 6px 0; }
+
+    .badges { display: flex; gap: 5px; flex-shrink: 0; align-items: center; }
+    .owner-badge {
+      font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: var(--bg);
+    }
+    .owner-badge.G { color: var(--owner-g); border: 1px solid rgba(56, 189, 248, 0.3); }
+    .owner-badge.A { color: var(--owner-a); border: 1px solid rgba(29, 173, 82, 0.3); }
+    .owner-badge.O { color: var(--owner-o); border: 1px solid rgba(189, 85, 15, 0.4); }
+
+    .meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+    .tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+    .tag.status-Wishlist { color: #FBBF24; border-color: rgba(251, 191, 36, 0.4); }
+    .tag.status-Lent { color: #F87171; border-color: rgba(248, 113, 113, 0.4); }
+    .tag.volumes { color: var(--text); font-family: ui-monospace, monospace; }
+
+    .book-note { font-size: 12px; color: var(--muted); margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+    .card-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+
+    /* Floating Add Button */
+    .fab {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      right: 20px;
+      background: var(--gold);
+      color: #0F172A;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 22px;
+      font-size: 16px;
+      font-weight: 800;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.88);
+      display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+    }
+    .modal {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      width: 100%; max-width: 460px; padding: 20px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { margin: 0 0 14px 0; color: var(--gold); }
+    .modal input, .modal select, .modal textarea { background: var(--bg); }
+    .field-label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .modal-actions button { flex: 1; padding: 11px; }
+
+    .cat-list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--bg); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border);
+    }
+
+    /* Print / PDF Styles */
+    @media print {
+      body { background: #fff !important; color: #000 !important; padding: 0 !important; }
+      .top-actions, .owner-tabs, .sub-filters, #searchInput, .fab, .card-actions { display: none !important; }
+      .container { max-width: 100% !important; padding: 0 !important; }
+      .gold-accent { color: #000 !important; text-shadow: none !important; }
+      .stats-bar { background: #f3f4f6 !important; color: #000 !important; border: 1px solid #ccc !important; }
+      .stats-bar span b { color: #000 !important; }
+      .book-card {
+        background: #fff !important; border: 1px solid #ccc !important; border-left-width: 4px !important;
+        page-break-inside: avoid; margin-bottom: 6px !important; padding: 8px 10px !important;
+      }
+      .book-author { color: #444 !important; }
+      .book-title { color: #000 !important; font-size: 14px !important; }
+      .tag, .owner-badge { background: #f9fafb !important; color: #000 !important; border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="top-bar">
+    <h2><span class="gold-accent">Gaben</span> Quill</h2>
+    <div class="top-actions">
+      <button class="btn-sm" onclick="openCatModal()">Categories</button>
+      <button class="btn-sm" onclick="window.print()">PDF</button>
+      <button class="btn-sm" onclick="exportData()">Export</button>
+      <button class="btn-sm" onclick="document.getElementById('importFile').click()">Import</button>
+      <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)" style="display:none;" />
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <span>Total: <b id="statTotal">0</b></span>
+    <span style="color:var(--owner-g)">G: <b id="statG">0</b></span>
+    <span style="color:var(--owner-a)">A: <b id="statA">0</b></span>
+    <span style="color:var(--owner-o)">O: <b id="statO">0</b></span>
+  </div>
+
+  <input type="text" id="searchInput" placeholder="Search author, title, series or note..." oninput="renderBooks()" />
+
+  <div class="owner-tabs">
+    <button class="tab active" data-owner="All" onclick="setOwner('All')">All</button>
+    <button class="tab" data-owner="G" onclick="setOwner('G')">G (Gaben)</button>
+    <button class="tab" data-owner="A" onclick="setOwner('A')">A (Daughter)</button>
+    <button class="tab" data-owner="O" onclick="setOwner('O')">O (Other)</button>
+  </div>
+
+  <div class="sub-filters">
+    <select id="filterCategory" onchange="renderBooks()">
+      <option value="All">All Categories</option>
+    </select>
+    <select id="filterStatus" onchange="renderBooks()">
+      <option value="All">All Statuses</option>
+      <option value="Owned">Owned</option>
+      <option value="Wishlist">Wishlist / Missing</option>
+      <option value="Lent">Lent Out</option>
+    </select>
+  </div>
+
+  <div id="booksList"></div>
+</div>
+
+<button class="fab" onclick="openBookModal()">+ Add Book</button>
+
+<!-- ADD / EDIT BOOK MODAL -->
+<div id="bookModalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <h3 id="bookModalTitle">Add Book</h3>
+    <input type="hidden" id="editBookId" />
+
+    <label class="field-label">Author *</label>
+    <input type="text" id="bookAuthor" placeholder="e.g. Stephen King" />
+
+    <label class="field-label">Book / Series Title *</label>
+    <input type="text" id="bookTitle" placeholder="e.g. The Dark Tower" />
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div>
+        <label class="field-label">Owner</label>
+        <select id="bookOwner">
+          <option value="G">G (Gaben)</option>
+          <option value="A">A (Daughter)</option>
+          <option value="O">O (Other / Shared)</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Status</label>
+        <select id="bookStatus">
+          <option value="Owned">Owned</option>
+          <option value="Wishlist">Wishlist / Missing</option>
+          <option value="Lent">Lent Out</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="field-label">Category</label>
+    <select id="bookCategory"></select>
+
+    <label class="field-label">Volumes / Parts (Optional)</label>
+    <input type="text" id="bookVolumes" placeholder="e.g. 1-16, 18, 19 (leave empty if standalone)" />
+
+    <label class="field-label">Notes (Optional)</label>
+    <textarea id="bookNote" rows="2" placeholder="Missing vol. 17, hardcover, lent to..."></textarea>
+
+    <div class="modal-actions">
+      <button onclick="closeBookModal()">Cancel</button>
+      <button class="btn-gold" onclick="saveBook()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE CATEGORIES MODAL -->
+<div id="catModalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <h3>Manage Categories</h3>
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <input type="text" id="newCatInput" placeholder="New category name..." style="margin-bottom: 0;" />
+      <button class="btn-gold" onclick="addCategory()">Add</button>
+    </div>
+    <div id="catList"></div>
+    <div class="modal-actions">
+      <button onclick="closeCatModal()">Done</button>
+    </div>
+  </div>
+</div>
+<script>
+  const BOOKS_KEY = 'gaben_quill_books_v1';
+  const CATS_KEY = 'gaben_quill_cats_v1';
+
+  const DEFAULT_CATS = ['Sci-Fi', 'Fantasy', 'Thriller / Crime', 'History / Non-Fiction', 'Youth', 'Reference'];
+  let books = JSON.parse(localStorage.getItem(BOOKS_KEY) || '[]');
+  let categories = JSON.parse(localStorage.getItem(CATS_KEY) || 'null') || [...DEFAULT_CATS];
+  let currentOwner = 'All';
+
+  window.addEventListener('DOMContentLoaded', () => {
+    refreshCategoryDropdowns();
+    renderBooks();
+  });
+
+  function saveAll() {
+    localStorage.setItem(BOOKS_KEY, JSON.stringify(books));
+    localStorage.setItem(CATS_KEY, JSON.stringify(categories));
+  }
+
+  function setOwner(owner) {
+    currentOwner = owner;
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.owner === owner);
+    });
+    renderBooks();
+  }
+
+  function refreshCategoryDropdowns() {
+    const filterSel = document.getElementById('filterCategory');
+    const modalSel = document.getElementById('bookCategory');
+    const prevFilter = filterSel.value;
+
+    filterSel.innerHTML = `<option value="All">All Categories</option>` +
+      categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+    modalSel.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+    if (categories.includes(prevFilter)) filterSel.value = prevFilter;
+  }
+
+  function updateStats() {
+    document.getElementById('statTotal').textContent = books.length;
+    document.getElementById('statG').textContent = books.filter(b => b.owner === 'G').length;
+    document.getElementById('statA').textContent = books.filter(b => b.owner === 'A').length;
+    document.getElementById('statO').textContent = books.filter(b => b.owner === 'O').length;
+  }
+
+  function renderBooks() {
+    updateStats();
+    const listEl = document.getElementById('booksList');
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    const catFilter = document.getElementById('filterCategory').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+
+    const filtered = books
+      .filter(b => {
+        const matchOwner = currentOwner === 'All' || b.owner === currentOwner;
+        const matchCat = catFilter === 'All' || b.category === catFilter;
+        const matchStatus = statusFilter === 'All' || b.status === statusFilter;
+        const text = `${b.author} ${b.title} ${b.volumes || ''} ${b.note || ''} ${b.category}`.toLowerCase();
+        return matchOwner && matchCat && matchStatus && text.includes(query);
+      })
+      .sort((a, b) => a.author.localeCompare(b.author) || a.title.localeCompare(b.title));
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `<p style="text-align:center; color: var(--muted); margin-top: 40px;">No books found.</p>`;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(b => {
+      const volTag = b.volumes ? `<span class="tag volumes">Vol: ${escapeHtml(b.volumes)}</span>` : '';
+      const statusLabel = b.status === 'Wishlist' ? 'Wishlist / Missing' : (b.status === 'Lent' ? 'Lent Out' : 'Owned');
+      const noteHtml = b.note ? `<div class="book-note">${escapeHtml(b.note)}</div>` : '';
+
+      return `
+        <div class="book-card" data-owner="${b.owner}">
+          <div class="card-top">
+            <div>
+              <div class="book-author">${escapeHtml(b.author)}</div>
+              <div class="book-title">${escapeHtml(b.title)}</div>
+            </div>
+            <div class="badges">
+              <span class="owner-badge ${b.owner}">${b.owner}</span>
+            </div>
+          </div>
+          <div class="meta-row">
+            <span class="tag">${escapeHtml(b.category)}</span>
+            <span class="tag status-${b.status}">${statusLabel}</span>
+            ${volTag}
+          </div>
+          ${noteHtml}
+          <div class="card-actions">
+            <button class="btn-sm" onclick="openBookModal('${b.id}')">Edit</button>
+            <button class="btn-sm btn-danger" onclick="deleteBook('${b.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  function openBookModal(id = null) {
+    document.getElementById('editBookId').value = id || '';
+    document.getElementById('bookModalTitle').textContent = id ? 'Edit Book' : 'Add Book';
+    refreshCategoryDropdowns();
+
+    if (id) {
+      const b = books.find(x => x.id === id);
+      document.getElementById('bookAuthor').value = b.author;
+      document.getElementById('bookTitle').value = b.title;
+      document.getElementById('bookOwner').value = b.owner;
+      document.getElementById('bookStatus').value = b.status;
+      document.getElementById('bookCategory').value = b.category;
+      document.getElementById('bookVolumes').value = b.volumes || '';
+      document.getElementById('bookNote').value = b.note || '';
+    } else {
+      document.getElementById('bookAuthor').value = '';
+      document.getElementById('bookTitle').value = '';
+      document.getElementById('bookOwner').value = currentOwner !== 'All' ? currentOwner : 'G';
+      document.getElementById('bookStatus').value = 'Owned';
+      document.getElementById('bookVolumes').value = '';
+      document.getElementById('bookNote').value = '';
+    }
+    document.getElementById('bookModalBackdrop').style.display = 'flex';
+  }
+
+  function closeBookModal() {
+    document.getElementById('bookModalBackdrop').style.display = 'none';
+  }
+
+  function saveBook() {
+    const author = document.getElementById('bookAuthor').value.trim();
+    const title = document.getElementById('bookTitle').value.trim();
+    if (!author || !title) return alert('Author and Title are required.');
+
+    const id = document.getElementById('editBookId').value || Date.now().toString();
+    const entry = {
+      id,
+      author,
+      title,
+      owner: document.getElementById('bookOwner').value,
+      status: document.getElementById('bookStatus').value,
+      category: document.getElementById('bookCategory').value,
+      volumes: document.getElementById('bookVolumes').value.trim(),
+      note: document.getElementById('bookNote').value.trim()
+    };
+
+    const idx = books.findIndex(b => b.id === id);
+    if (idx > -1) books[idx] = entry;
+    else books.push(entry);
+
+    saveAll();
+    closeBookModal();
+    renderBooks();
+  }
+
+  function deleteBook(id) {
+    if (!confirm('Delete this book?')) return;
+    books = books.filter(b => b.id !== id);
+    saveAll();
+    renderBooks();
+  }
+
+  // Category Management
+  function openCatModal() {
+    renderCatList();
+    document.getElementById('catModalBackdrop').style.display = 'flex';
+  }
+
+  function closeCatModal() {
+    document.getElementById('catModalBackdrop').style.display = 'none';
+    refreshCategoryDropdowns();
+    renderBooks();
+  }
+
+  function renderCatList() {
+    document.getElementById('catList').innerHTML = categories.map((c, idx) => `
+      <div class="cat-list-item">
+        <span>${escapeHtml(c)}</span>
+        <button class="btn-sm btn-danger" onclick="removeCategory(${idx})">Remove</button>
+      </div>
+    `).join('');
+  }
+
+  function addCategory() {
+    const input = document.getElementById('newCatInput');
+    const val = input.value.trim();
+    if (!val || categories.includes(val)) return;
+    categories.push(val);
+    input.value = '';
+    saveAll();
+    renderCatList();
+  }
+
+  function removeCategory(idx) {
+    if (categories.length <= 1) return alert('At least one category is required.');
+    categories.splice(idx, 1);
+    saveAll();
+    renderCatList();
+  }
+
+  // Export & Import
+  function exportData() {
+    const payload = JSON.stringify({ books, categories }, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `gaben-quill-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (Array.isArray(parsed.books)) {
+          books = parsed.books;
+          if (Array.isArray(parsed.categories) && parsed.categories.length) {
+            categories = parsed.categories;
+          }
+          saveAll();
+          refreshCategoryDropdowns();
+          renderBooks();
+          alert('Library imported successfully!');
+        }
+      } catch (err) {
+        alert('Invalid backup file.');
+      }
+      event.target.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  }
+</script>
+</body>
+</html>
