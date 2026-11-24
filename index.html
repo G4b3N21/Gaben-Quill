@@ -207,20 +207,20 @@
     </div>
   </div>
 
-  <div class="stats-bar" id="statsBar">
+   <div class="stats-bar" id="statsBar">
     <span>Total: <b id="statTotal">0</b></span>
-    <span style="color:var(--owner-g)">G: <b id="statG">0</b></span>
-    <span style="color:var(--owner-a)">A: <b id="statA">0</b></span>
-    <span style="color:var(--owner-o)">O: <b id="statO">0</b></span>
+    <span style="color:var(--owner-g)">G∆β∃n: <b id="statG">0</b></span>
+    <span style="color:var(--owner-a)">∆nnα: <b id="statA">0</b></span>
+    <span style="color:var(--owner-o)">Øth∃r: <b id="statO">0</b></span>
   </div>
 
   <input type="text" id="searchInput" placeholder="Search author, title, series or note..." oninput="renderBooks()" />
 
-  <div class="owner-tabs">
+    <div class="owner-tabs">
     <button class="tab active" data-owner="All" onclick="setOwner('All')">All</button>
-    <button class="tab" data-owner="G" onclick="setOwner('G')">G (Gaben)</button>
-    <button class="tab" data-owner="A" onclick="setOwner('A')">A (Daughter)</button>
-    <button class="tab" data-owner="O" onclick="setOwner('O')">O (Other)</button>
+    <button class="tab" data-owner="G" onclick="setOwner('G')">G∆β∃n</button>
+    <button class="tab" data-owner="A" onclick="setOwner('A')">∆nnα</button>
+    <button class="tab" data-owner="O" onclick="setOwner('O')">Øth∃r</button>
   </div>
 
   <div class="sub-filters">
@@ -256,9 +256,9 @@
       <div>
         <label class="field-label">Owner</label>
         <select id="bookOwner">
-          <option value="G">G (Gaben)</option>
-          <option value="A">A (Daughter)</option>
-          <option value="O">O (Other / Shared)</option>
+          <option value="G">G∆β∃n</option>
+          <option value="A">∆nnα</option>
+          <option value="O">Øth∃r</option>
         </select>
       </div>
       <div>
@@ -383,7 +383,7 @@
               <div class="book-title">${escapeHtml(b.title)}</div>
             </div>
             <div class="badges">
-              <span class="owner-badge ${b.owner}">${b.owner}</span>
+              <span class="owner-badge ${b.owner}">${b.owner === 'G' ? 'G∆β∃n' : (b.owner === 'A' ? '∆nnα' : 'Øth∃r')}</span>
             </div>
           </div>
           <div class="meta-row">
